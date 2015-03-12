@@ -198,10 +198,26 @@ static void ProcessShaderCode(VertexShaderState& state) {
                 src2[3] = src2[3] * float24::FromFloat32(-1);
             }
 
-            float24* dest = (instr.common.dest.Value() < 0x08) ? state.output_register_table[4*instr.common.dest.Value().GetIndex()]
-                        : (instr.common.dest.Value() < 0x10) ? dummy_vec4_float24
-                        : (instr.common.dest.Value() < 0x20) ? &state.temporary_registers[instr.common.dest.Value().GetIndex()][0]
-                        : dummy_vec4_float24;
+            float24* dest[4];
+            u32 index = instr.common.dest.Value().GetIndex();
+
+            if (instr.common.dest.Value() < 0x07) { 
+                // output registers
+                index *= 4;
+                for (int i = 0; i < 4; ++i)
+                    dest[i] = state.output_register_table[index++];
+
+            } else if (instr.common.dest.Value() < 0x20 && instr.common.dest.Value() >= 0x10) { 
+                // temp registers
+                for (int i = 0; i < 4; ++i)
+                    dest[i] = &state.temporary_registers[index][i];
+
+            } else {
+                // unknown destination
+                for (int i = 0; i < 4; ++i)
+                    dest[i] = &dummy_vec4_float24[i];
+
+            }
 
             state.debug.max_opdesc_id = std::max<u32>(state.debug.max_opdesc_id, 1+instr.common.operand_desc_id);
 
@@ -212,7 +228,7 @@ static void ProcessShaderCode(VertexShaderState& state) {
                     if (!swizzle.DestComponentEnabled(i))
                         continue;
 
-                    dest[i] = src1[i] + src2[i];
+                    *dest[i] = src1[i] + src2[i];
                 }
 
                 break;
@@ -224,7 +240,7 @@ static void ProcessShaderCode(VertexShaderState& state) {
                     if (!swizzle.DestComponentEnabled(i))
                         continue;
 
-                    dest[i] = src1[i] * src2[i];
+                    *dest[i] = src1[i] * src2[i];
                 }
 
                 break;
@@ -235,7 +251,7 @@ static void ProcessShaderCode(VertexShaderState& state) {
                     if (!swizzle.DestComponentEnabled(i))
                         continue;
 
-                    dest[i] = std::max(src1[i], src2[i]);
+                    *dest[i] = std::max(src1[i], src2[i]);
                 }
                 break;
 
@@ -251,7 +267,7 @@ static void ProcessShaderCode(VertexShaderState& state) {
                     if (!swizzle.DestComponentEnabled(i))
                         continue;
 
-                    dest[i] = dot;
+                    *dest[i] = dot;
                 }
                 break;
             }
@@ -265,7 +281,7 @@ static void ProcessShaderCode(VertexShaderState& state) {
 
                     // TODO: Be stable against division by zero!
                     // TODO: I think this might be wrong... we should only use one component here
-                    dest[i] = float24::FromFloat32(1.0f / src1[i].ToFloat32());
+                    *dest[i] = float24::FromFloat32(1.0f / src1[i].ToFloat32());
                 }
 
                 break;
@@ -280,7 +296,7 @@ static void ProcessShaderCode(VertexShaderState& state) {
 
                     // TODO: Be stable against division by zero!
                     // TODO: I think this might be wrong... we should only use one component here
-                    dest[i] = float24::FromFloat32(1.0f / sqrt(src1[i].ToFloat32()));
+                    *dest[i] = float24::FromFloat32(1.0f / sqrt(src1[i].ToFloat32()));
                 }
 
                 break;
@@ -305,7 +321,7 @@ static void ProcessShaderCode(VertexShaderState& state) {
                     if (!swizzle.DestComponentEnabled(i))
                         continue;
 
-                    dest[i] = src1[i];
+                    *dest[i] = src1[i];
                 }
                 break;
             }
@@ -409,16 +425,34 @@ static void ProcessShaderCode(VertexShaderState& state) {
                     src3[3] = src3[3] * float24::FromFloat32(-1);
                 }
 
-                float24* dest = (instr.mad.dest.Value() < 0x08) ? state.output_register_table[4*instr.mad.dest.Value().GetIndex()]
-                            : (instr.mad.dest.Value() < 0x10) ? dummy_vec4_float24
-                            : (instr.mad.dest.Value() < 0x20) ? &state.temporary_registers[instr.mad.dest.Value().GetIndex()][0]
-                            : dummy_vec4_float24;
+                float24* dest[4];
+                u32 index = instr.common.dest.Value().GetIndex();
+
+                if (instr.common.dest.Value() < 0x07) {
+                    // output registers
+                    index *= 4;
+                    for (int i = 0; i < 4; ++i)
+                        dest[i] = state.output_register_table[index++];
+
+                }
+                else if (instr.common.dest.Value() < 0x20 && instr.common.dest.Value() >= 0x10) {
+                    // temp registers
+                    for (int i = 0; i < 4; ++i)
+                        dest[i] = &state.temporary_registers[index][i];
+
+                }
+                else {
+                    // unknown destination
+                    for (int i = 0; i < 4; ++i)
+                        dest[i] = &dummy_vec4_float24[i];
+
+                }
 
                 for (int i = 0; i < 4; ++i) {
                     if (!swizzle.DestComponentEnabled(i))
                         continue;
 
-                    dest[i] = src1[i] * src2[i] + src3[i];
+                    *dest[i] = src1[i] * src2[i] + src3[i];
                 }
             } else {
                 LOG_ERROR(HW_GPU, "Unhandled multiply-add instruction: 0x%02x (%s): 0x%08x",

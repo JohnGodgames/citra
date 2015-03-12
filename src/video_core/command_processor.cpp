@@ -120,6 +120,14 @@ static inline void WritePicaReg(u32 id, u32 value, u32 mask) {
                 // Initialize data for the current vertex
                 VertexShader::InputVertex input;
 
+                // Zero fill vertex attributes that are not assigned.
+                // TODO: Verify behaviour on hardware. Without this, Bravely Default 
+                // and Super Monkey Ball crash spontaneously, though the problems 
+                // could be rooted elsewhere.
+                for (int i = 0; i < 16; ++i) {
+                    for (int comp = 0; comp < 4; ++comp) input.attr[i][comp] = float24::FromFloat32(0);
+                }
+
                 // Load a debugging token to check whether this gets loaded by the running
                 // application or not.
                 static const float24 debug_token = float24::FromRawFloat24(0x00abcdef);
