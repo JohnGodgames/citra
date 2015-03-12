@@ -426,22 +426,21 @@ static void ProcessShaderCode(VertexShaderState& state) {
                 }
 
                 float24* dest[4];
-                u32 index = instr.common.dest.Value().GetIndex();
+                u32 index = instr.mad.dest.Value().GetIndex();
 
-                if (instr.common.dest.Value() < 0x07) {
+                if (instr.mad.dest.Value() < 0x07) {
                     // output registers
                     index *= 4;
                     for (int i = 0; i < 4; ++i)
                         dest[i] = state.output_register_table[index++];
 
                 }
-                else if (instr.common.dest.Value() < 0x20 && instr.common.dest.Value() >= 0x10) {
+                else if (instr.mad.dest.Value() < 0x20 && instr.mad.dest.Value() >= 0x10) {
                     // temp registers
                     for (int i = 0; i < 4; ++i)
                         dest[i] = &state.temporary_registers[index][i];
 
-                }
-                else {
+                } else {
                     // unknown destination
                     for (int i = 0; i < 4; ++i)
                         dest[i] = &dummy_vec4_float24[i];
